@@ -1,0 +1,111 @@
+defmodule CalendarApp.Calendar do
+  use Ecto.Schema
+  import Ecto.Changeset
+  import Ecto.Query
+  require Logger
+
+  schema "calendars" do
+    field :data, :string
+    field :name, :string
+    field :url, :string
+
+    timestamps()
+  end
+
+  @doc false
+  def changeset(calendar, attrs) do
+    calendar
+    |> cast(attrs, [:name, :url, :data])
+    |> validate_required([:name, :url, :data])
+  end
+
+  def list() do
+    CalendarApp.Repo.all(from __MODULE__)
+  end
+
+  def load(id) do
+    CalendarApp.Repo.get!(__MODULE__, id)
+  end
+
+  def add(name, url) do
+    %__MODULE__{name: name, url: url, data: ""}
+    |> CalendarApp.Repo.insert!()
+  end
+
+  def update(calendar) do
+    CalendarApp.Repo.update!(calendar)
+  end
+
+  def update_calendar(%{data: original} = calendar) do
+    %{data: new} = download(calendar)
+    |> download()
+
+    calendar
+    |> Ecto.Changeset.change(%{data: new})
+    |> CalendarApp.Repo.update!()
+
+    if original != new do
+      Logger.info("New data for #{calendar.name}")
+      Phoenix.PubSub.broadcast!(CalendarApp.PubSub, "calendars", {:updated, calendar.id})
+    end
+  end
+
+  def get_next_event(calendar) do
+    events = calendar
+    |> IO.inspect()
+    |> parse_to_events()
+    |> expand_recurrence()
+    |> reject_past_events()
+    |> sort_by_start()
+    |> IO.inspect()
+
+    case events do
+      [event | _] -> event
+      [] -> nil
+      [event] -> event
+    end
+  end
+
+  def download(%{name: name, url: url} = calendar) do
+    case :httpc.request(url) do
+      {:ok, {{_, 200, _}, _headers, body}} ->
+        Map.put(calendar, :data, to_string(body))
+      {:ok, {200, body}} ->
+        Map.put(calendar, :data, to_string(body))
+      _error ->
+        Logger.error("Could not download URL for #{name}.")
+        raise "Could not download URL for #{name}."
+    end
+  end
+
+  def parse_to_events(%{data: data} = _calendar) do
+    ICalendar.from_ics(data)
+  end
+
+  def expand_recurrence(events, weeks_from_now \\ 1) do
+    now = DateTime.utc_now()
+    end_date = now |> Date.add(weeks_from_now * 7)
+    events
+    |> Enum.filter(fn %{rrule: rule} ->
+      not is_nil(rule)
+    end)
+    |> Enum.map(fn event ->
+      ICalendar.Recurrence.get_recurrences(event, end_date)
+    end)
+    |> Enum.flat_map(fn event ->
+      event
+    end)
+    |> Enum.concat(events)
+  end
+
+  def reject_past_events(events) do
+    now = DateTime.utc_now()
+    Enum.reject(events, fn %{dtend: dtend} ->
+      DateTime.compare(now, dtend) == :gt
+    end)
+  end
+
+  def sort_by_start(events) do
+    Enum.sort_by(events, fn %{dtstart: dtstart} -> dtstart end, DateTime)
+  end
+end
