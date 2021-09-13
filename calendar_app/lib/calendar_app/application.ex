@@ -18,6 +18,7 @@ defmodule CalendarApp.Application do
       CalendarAppWeb.Endpoint,
       # Start a worker by calling: CalendarApp.Worker.start_link(arg)
       # {CalendarApp.Worker, arg}
+      CalendarApp.InkyDisplay,
       CalendarApp.Refresher
     ]
 

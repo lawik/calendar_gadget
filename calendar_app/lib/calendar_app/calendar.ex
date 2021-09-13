@@ -50,14 +50,27 @@ defmodule CalendarApp.Calendar do
     end
   end
 
+  def get_next_event(calendars) when is_list(calendars) do
+    events = calendars
+    |> Enum.map(&parse_to_events/1)
+    |> List.flatten()
+    |> expand_recurrence()
+    |> reject_past_events()
+    |> sort_by_start()
+
+    case events do
+      [event | _] -> event
+      [] -> nil
+      [event] -> event
+    end
+  end
+
   def get_next_event(calendar) do
     events = calendar
-    |> IO.inspect()
     |> parse_to_events()
     |> expand_recurrence()
     |> reject_past_events()
     |> sort_by_start()
-    |> IO.inspect()
 
     case events do
       [event | _] -> event
