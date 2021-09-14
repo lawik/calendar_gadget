@@ -8,6 +8,7 @@ defmodule CalendarAppWeb.PageLive do
     if connected?(socket) do
       Phoenix.PubSub.subscribe(CalendarApp.PubSub, "calendars")
       Phoenix.PubSub.subscribe(CalendarApp.PubSub, "inky-preview")
+      Phoenix.PubSub.broadcast(CalendarApp.PubSub, "inky-connected", :connected)
     end
     calendars = Calendar.list()
     next_event = Calendar.get_next_event(calendars)
@@ -36,7 +37,7 @@ defmodule CalendarAppWeb.PageLive do
 
       <%= if @inky_preview do %>
       <h2>Preview</h2>
-      <div style={style_preview(@inky_preview.display)}>
+      <div style={style_preview(@inky_preview)}>
         <%= for {{x,y}, pixel} <- sort_colors(@inky_preview.pixels) do %>
           <div style={"position: absolute; top: #{y}px; left: #{x}px; width: 1px; height: 1px; background-color: #{pixel};"}></div>
         <% end %>
@@ -45,8 +46,12 @@ defmodule CalendarAppWeb.PageLive do
     """
   end
 
-  def style_preview(display) do
-    "position: relative;"
+  def style_preview(%{display: display, border: border}) do
+    bcolor = case border do
+      :accent -> display.accent
+      color -> color
+    end
+    "position: relative; width: #{display.width+2}px; height: #{display.height+2}px; border: 1px solid #{bcolor};"
   end
 
   def format_dt(dt) do

@@ -82,9 +82,13 @@ defmodule CalendarApp.Calendar do
   def download(%{name: name, url: url} = calendar) do
     case :httpc.request(url) do
       {:ok, {{_, 200, _}, _headers, body}} ->
-        Map.put(calendar, :data, to_string(body))
+        :file.write_file("tmp.ical", body)
+        body = File.read!("tmp.ical")
+        Map.put(calendar, :data, body)
       {:ok, {200, body}} ->
-        Map.put(calendar, :data, to_string(body))
+        :file.write_file("tmp.ical", body)
+        body = File.read!("tmp.ical")
+        Map.put(calendar, :data, body)
       _error ->
         Logger.error("Could not download URL for #{name}.")
         raise "Could not download URL for #{name}."
