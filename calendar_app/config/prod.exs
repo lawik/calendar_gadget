@@ -10,11 +10,16 @@ import Config
 # which you should run after static files are built and
 # before starting your production server.
 config :calendar_app, CalendarAppWeb.Endpoint,
-  url: [host: "example.com", port: 80],
-  cache_static_manifest: "priv/static/cache_manifest.json"
+  url: [host: "example.com", port: 80]
+#  cache_static_manifest: "priv/static/cache_manifest.json"
 
 # Do not print debug messages in production
 config :logger, level: :info
+
+config :calendar_app, CalendarApp.Repo,
+  database: Path.expand("/data/calendar_app_prod.db", Path.dirname(__ENV__.file)),
+  pool_size: 5,
+  show_sensitive_data_on_connection_error: false
 
 # ## SSL Support
 #

@@ -2,12 +2,21 @@ defmodule CalendarApp.InkyDisplay do
   use GenServer
 
   alias CalendarApp.Calendar
+  require Logger
+
+  @use_hardware Mix.target() != :host
+  @priv (if (@use_hardware) do
+    "/fonts"
+  else
+    "priv"
+  end)
 
   @fonts %{
-    title: "priv/aqui.bdf",
-    body: "priv/snap.bdf",
-    small: "priv/nu.bdf"
+    title: Path.join(@priv, "aqui.bdf"),
+    body: Path.join(@priv, "snap.bdf"),
+    small: Path.join(@priv, "nu.bdf")
   }
+
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, opts)
@@ -17,9 +26,16 @@ defmodule CalendarApp.InkyDisplay do
   def init(opts) do
     type = :phat
     accent = :red
-    {:ok, pid} = Inky.start_link(type, accent, %{name: Calendarapp.Inky, border: :accent, hal_mod: CalendarApp.InkyPreview})
+    {:ok, pid1} = Inky.start_link(type, accent, %{name: Calendarapp.InkyPreviewDevice, border: :accent, hal_mod: CalendarApp.InkyPreview})
+    pids = if @use_hardware do
+      {:ok, pid2} = Inky.start_link(type, accent, %{name: Calendarapp.InkyPreviewDevice, border: :accent})
+      [pid1, pid2]
+    else
+      [pid1]
+    end
     fonts = @fonts
             |> Enum.map(fn {usage, path} ->
+              Logger.info("Loading font: #{path}")
               {:ok, font} = Chisel.Font.load(path)
               {usage, font}
             end)
@@ -28,7 +44,7 @@ defmodule CalendarApp.InkyDisplay do
     Phoenix.PubSub.subscribe(CalendarApp.PubSub, "inky-connected")
 
     spec = Inky.Display.spec_for(type, accent)
-    state = %{pid: pid, spec: spec, fonts: fonts}
+    state = %{pids: pids, spec: spec, fonts: fonts}
     paint_current(state)
     {:ok, state}
   end
@@ -46,30 +62,18 @@ defmodule CalendarApp.InkyDisplay do
   end
 
   def paint_current(state) do
-    %{summary: title, dtstart: dtstart} = next_event = Calendar.list() |> Calendar.get_next_event()
-    state.spec
-    |> blank_buffer(:white)
-    |> draw_rect(0, 0, state.spec.width-1, 20, state.spec.accent)
-    |> draw_text(0, 4, format_dt(dtstart), :white, state.fonts.body, centered: state.spec.width)
-    |> draw_text(0, 24, title, :black, state.fonts.title, centered: state.spec.width)
-    |> cull(state.spec)
-    |> push(state.pid)
-  end
-
-  def paint_default(pid) do
-    painter = fn x, y, w, h, _pixels_so_far ->
-      wh = w / 2
-      hh = h / 2
-
-      case {x >= wh, y >= hh} do
-        {true, true} -> :red
-        {false, true} -> if(rem(x, 2) == 0, do: :black, else: :white)
-        {true, false} -> :black
-        {false, false} -> :white
-      end
+    case Calendar.list() |> Calendar.get_next_event() do
+      nil -> nil
+      next_event ->
+        %{summary: title, dtstart: dtstart} = next_event
+        state.spec
+        |> blank_buffer(:white)
+        |> draw_rect(0, 0, state.spec.width-1, 20, state.spec.accent)
+        |> draw_text(0, 4, format_dt(dtstart), :white, state.fonts.body, centered: state.spec.width)
+        |> draw_text(0, 24, title, :black, state.fonts.title, centered: state.spec.width)
+        |> cull(state.spec)
+        |> push(state.pids)
     end
-
-    Inky.set_pixels(pid, painter, border: :white)
   end
 
   def blank_buffer(spec, color) do
@@ -119,8 +123,10 @@ defmodule CalendarApp.InkyDisplay do
     buffer
   end
 
-  def push(buffer, pid) do
-    Inky.set_pixels(pid, buffer)
+  def push(buffer, pids) do
+    Enum.each(pids, fn pid ->
+      Inky.set_pixels(pid, buffer)
+    end)
   end
 
   def format_dt(dt) do
