@@ -2,6 +2,8 @@
 
 Can take a calendar link (tested with Google Calendar) and show you the next item on the agenda on an Inky Phat eInk display.
 
+<img src="extras/soon.jpg" alt="Picture of eInk display showing calendar event" />
+
 To get it running:
 
 ## Get fonts
