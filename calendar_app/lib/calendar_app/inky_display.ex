@@ -28,7 +28,7 @@ defmodule CalendarApp.InkyDisplay do
     accent = :red
     {:ok, pid1} = Inky.start_link(type, accent, %{name: Calendarapp.InkyPreviewDevice, border: :accent, hal_mod: CalendarApp.InkyPreview})
     pids = if @use_hardware do
-      {:ok, pid2} = Inky.start_link(type, accent, %{name: Calendarapp.InkyPreviewDevice, border: :accent})
+      {:ok, pid2} = Inky.start_link(type, accent, %{name: Calendarapp.InkyDevice, border: :accent})
       [pid1, pid2]
     else
       [pid1]

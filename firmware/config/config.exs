@@ -7,7 +7,7 @@ import Config
 
 import_config "../../calendar_app/config/config.exs"
 
-config :my_app_ui, MyAppUiWeb.Endpoint,
+config :calendar_app, CalendarAppWeb.Endpoint,
   # Nerves root filesystem is read-only, so disable the code reloader
   code_reloader: false,
   http: [port: 80],
@@ -16,6 +16,13 @@ config :my_app_ui, MyAppUiWeb.Endpoint,
   # Start the server since we're running in a release instead of through `mix`
   server: true,
   url: [host: "nerves.local", port: 80]
+
+config :calendar_app, CalendarApp.Repo,
+  database: "/data/calendar_app_dev.db",
+  pool_size: 5,
+  show_sensitive_data_on_connection_error: true
+
+config :tzdata, :data_dir, "/data/tzdata"
 
 # Enable the Nerves integration with Mix
 Application.start(:nerves_bootstrap)

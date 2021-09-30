@@ -53,6 +53,7 @@ defmodule CalendarApp.MixProject do
       {:chisel, "~> 0.2.0"},
       {:oled, "~> 0.3.4"},
       {:icalendar, "~> 1.1.0"},
+      {:finch, "~> 0.8.2"}
       #{:excal, "~> 0.3.2"}
 
       #{:cocktail, "~> 0.10"}

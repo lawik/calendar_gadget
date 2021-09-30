@@ -50,7 +50,7 @@ config :nerves_ssh,
 # Configure the network using vintage_net
 # See https://github.com/nerves-networking/vintage_net for more information
 config :vintage_net,
-  regulatory_domain: "US",
+  regulatory_domain: "SE",
   config: [
     {"usb0", %{type: VintageNetDirect}},
     {"eth0",
@@ -58,7 +58,16 @@ config :vintage_net,
        type: VintageNetEthernet,
        ipv4: %{method: :dhcp}
      }},
-    {"wlan0", %{type: VintageNetWiFi}}
+    {"wlan0", %{
+      type: VintageNetWiFi,
+      vintage_net_wifi: %{
+        key_mgmt: :wpa_psk,
+        mode: :infrastructure,
+        ssid: System.get("SSID") || raise "No wifi SSID provided",
+        psk: System.get("PSK") || raise "No wifi PSK provided"
+      },
+      ipv4: %{method: :dhcp},
+    }}
   ]
 
 config :mdns_lite,

@@ -13,6 +13,7 @@ defmodule CalendarApp.Application do
       CalendarApp.Repo,
       # Start the Telemetry supervisor
       CalendarAppWeb.Telemetry,
+      {Finch, name: CalendarApp.Finch},
       # Start the PubSub system
       {Phoenix.PubSub, name: CalendarApp.PubSub},
       # Start the Endpoint (http/https)

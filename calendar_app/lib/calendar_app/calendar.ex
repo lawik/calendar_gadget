@@ -80,17 +80,15 @@ defmodule CalendarApp.Calendar do
   end
 
   def download(%{name: name, url: url} = calendar) do
-    case :httpc.request(url) do
-      {:ok, {{_, 200, _}, _headers, body}} ->
-        :file.write_file("tmp.ical", body)
-        body = File.read!("tmp.ical")
+    response = :get
+    |> Finch.build(url)
+    |> Finch.request(CalendarApp.Finch)
+
+    case response do
+      {:ok, %{status: 200, body: body}} ->
         Map.put(calendar, :data, body)
-      {:ok, {200, body}} ->
-        :file.write_file("tmp.ical", body)
-        body = File.read!("tmp.ical")
-        Map.put(calendar, :data, body)
-      _error ->
-        Logger.error("Could not download URL for #{name}.")
+      error_response ->
+        Logger.error("Could not download URL for #{name}: #{inspect(error_response)}")
         raise "Could not download URL for #{name}."
     end
   end

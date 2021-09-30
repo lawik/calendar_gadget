@@ -12,6 +12,7 @@ defmodule CalendarAppWeb.PageLive do
     end
     calendars = Calendar.list()
     next_event = Calendar.get_next_event(calendars)
+
     {:ok, assign(socket, calendars: calendars, next_event: next_event, inky_preview: nil)}
   end
 
