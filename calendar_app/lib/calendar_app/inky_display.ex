@@ -4,6 +4,8 @@ defmodule CalendarApp.InkyDisplay do
   alias CalendarApp.Calendar
   require Logger
 
+  @to_timezone "Europe/Stockholm"
+
   @use_hardware Mix.target() != :host
   @priv (if (@use_hardware) do
     "/fonts"
@@ -44,35 +46,46 @@ defmodule CalendarApp.InkyDisplay do
     Phoenix.PubSub.subscribe(CalendarApp.PubSub, "inky-connected")
 
     spec = Inky.Display.spec_for(type, accent)
-    state = %{pids: pids, spec: spec, fonts: fonts}
+    state = %{pids: pids, spec: spec, fonts: fonts, last_event: nil}
     paint_current(state)
     {:ok, state}
   end
 
   @impl true
   def handle_info({:updated, calendar_id}, state) do
-    paint_current(state)
+    state = paint_current(state)
     {:noreply, state}
   end
 
   @impl true
   def handle_info(:connected, state) do
-    paint_current(state)
+    state = paint_current(state)
     {:noreply, state}
   end
 
   def paint_current(state) do
-    case Calendar.list() |> Calendar.get_next_event() do
+    case Calendar.list() |> Calendar.get_next_events(2) do
       nil -> nil
-      next_event ->
-        %{summary: title, dtstart: dtstart} = next_event
+      [] -> nil
+      [next_event | events] ->
+        %{summary: title, dtstart: dtstart, location: location} = next_event
+        {after_title, after_start} = case events do
+          [%{summary: s, dtstart: st}] -> {s, format_t(st)}
+          _ -> {"", ""}
+        end
         state.spec
         |> blank_buffer(:white)
         |> draw_rect(0, 0, state.spec.width-1, 20, state.spec.accent)
         |> draw_text(0, 4, format_dt(dtstart), :white, state.fonts.body, centered: state.spec.width)
+        |> draw_text(0, 40, location, :black, state.fonts.body, centered: state.spec.width)
+        |> draw_rect(8, state.spec.height-34, state.spec.width-8, state.spec.height-34, :black)
+        |> draw_text(0, state.spec.height-32, after_title, :black, state.fonts.body, centered: state.spec.width)
+        |> draw_text(0, state.spec.height-16, after_start, :black, state.fonts.body, centered: state.spec.width)
         |> draw_text(0, 24, title, :black, state.fonts.title, centered: state.spec.width)
         |> cull(state.spec)
         |> push(state.pids)
+
+        %{state | last_event: next_event}
     end
   end
 
@@ -131,10 +144,22 @@ defmodule CalendarApp.InkyDisplay do
 
   def format_dt(dt) do
     dt
+    |> DateTime.shift_zone(@to_timezone)
+    |> elem(1)
     |> DateTime.to_iso8601()
     |> String.replace("T", " ")
     |> String.split("+")
     |> hd()
     |> String.replace(":00Z", "")
+    |> String.replace("00:00", "00")
+  end
+
+  def format_t(dt) do
+    dt
+    |> DateTime.shift_zone(@to_timezone)
+    |> elem(1)
+    |> DateTime.to_time()
+    |> Time.to_iso8601()
+    |> String.replace("00:00", "00")
   end
 end

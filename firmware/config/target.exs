@@ -63,8 +63,8 @@ config :vintage_net,
       vintage_net_wifi: %{
         key_mgmt: :wpa_psk,
         mode: :infrastructure,
-        ssid: System.get("SSID") || raise "No wifi SSID provided",
-        psk: System.get("PSK") || raise "No wifi PSK provided"
+        ssid: (System.get_env("SSID") || raise "No wifi SSID provided"),
+        psk: (System.get_env("PSK") || raise "No wifi PSK provided")
       },
       ipv4: %{method: :dhcp},
     }}

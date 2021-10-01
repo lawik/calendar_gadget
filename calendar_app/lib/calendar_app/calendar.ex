@@ -79,6 +79,16 @@ defmodule CalendarApp.Calendar do
     end
   end
 
+  def get_next_events(calendars, num) when is_list(calendars) do
+    events = calendars
+    |> Enum.map(&parse_to_events/1)
+    |> List.flatten()
+    |> expand_recurrence()
+    |> reject_past_events()
+    |> sort_by_start()
+    |> Enum.take(num)
+  end
+
   def download(%{name: name, url: url} = calendar) do
     response = :get
     |> Finch.build(url)
