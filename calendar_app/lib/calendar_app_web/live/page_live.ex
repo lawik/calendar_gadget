@@ -29,13 +29,29 @@ defmodule CalendarAppWeb.PageLive do
   end
 
   @impl true
+  def handle_event("add", %{"name" => name, "url" => url}, socket) do
+    Calendar.add(name, url)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("remove", %{"name" => name}, socket) do
+    Calendar.remove(name)
+    {:noreply, socket}
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
+    <p><%= inspect(@calendars |> Enum.map(fn c -> c.name end)) %></p>
+      <section id="next">
       <%= if @next_event do %>
       <h2><%= @next_event.summary %></h2>
         <p>Start: <%= @next_event.dtstart |> format_dt() %></p>
       <% end %>
+      </section>
 
+      <section id="preview">
       <%= if @inky_preview do %>
       <h2>Preview</h2>
       <div style={style_preview(@inky_preview)}>
@@ -44,6 +60,31 @@ defmodule CalendarAppWeb.PageLive do
         <% end %>
       </div>
       <% end %>
+      </section>
+
+      <section id="calendars" phx-update="append">
+      <h2 style="margin-top: 48px;">Calendars</h2>
+      <%= for calendar <- @calendars do %>
+      <form id={"calendar-#{calendar.id}"} phx-submit="delete" action="#">
+        <input type="hidden" name="id" value={calendar.id} />
+        <%= calendar.name %>
+        <button>Remove</button>
+      </form>
+      <% end %>
+      </section>
+
+      <section id="add-calendar">
+      <h2 style="margin-top: 48px;">Add calendar</h2>
+      <form id="calendar" phx-submit="add" action="#">
+        <label>Name:<br/>
+          <input type="text" name="name" />
+        </label>
+        <label>URL:<br/>
+          <input type="text" name="url" />
+        </label>
+        <button>Add calendar</button>
+      </form>
+      </section>
     """
   end
 

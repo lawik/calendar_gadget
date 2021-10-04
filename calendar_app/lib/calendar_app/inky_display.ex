@@ -101,7 +101,11 @@ defmodule CalendarApp.InkyDisplay do
     Map.merge(buffer, scratch)
   end
 
-  def draw_text(buffer, x, y, text, color, font, opts \\ []) do
+  def draw_text(buffer, x, y, text, color, fonts, opts \\ [])
+
+  def draw_text(buffer, _x, _y, nil, _color, _font, _opts), do: buffer
+
+  def draw_text(buffer, x, y, text, color, font, opts) do
     centering = Keyword.get(opts, :centered, 0)
     x = case centering do
       0 -> x

@@ -32,6 +32,11 @@ defmodule CalendarApp.Calendar do
     |> CalendarApp.Repo.insert!()
   end
 
+  def remove(name) do
+    CalendarApp.Repo.get_by(__MODULE__, name: name)
+    |> CalendarApp.Repo.delete!()
+  end
+
   def update(calendar) do
     CalendarApp.Repo.update!(calendar)
   end
