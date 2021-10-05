@@ -53,39 +53,47 @@ defmodule CalendarApp.InkyDisplay do
 
   @impl true
   def handle_info({:updated, calendar_id}, state) do
+    Logger.info("Updated calendar, trying update...")
     state = paint_current(state)
     {:noreply, state}
   end
 
   @impl true
   def handle_info(:connected, state) do
-    state = paint_current(state)
+    Logger.info("Connected device, forcing update...")
+    state = paint_current(state, true)
     {:noreply, state}
   end
 
-  def paint_current(state) do
+  def paint_current(state, force \\ false) do
     case Calendar.list() |> Calendar.get_next_events(2) do
-      nil -> nil
-      [] -> nil
+      nil -> state
+      [] -> state
       [next_event | events] ->
-        %{summary: title, dtstart: dtstart, location: location} = next_event
-        {after_title, after_start} = case events do
-          [%{summary: s, dtstart: st}] -> {s, format_t(st)}
-          _ -> {"", ""}
-        end
-        state.spec
-        |> blank_buffer(:white)
-        |> draw_rect(0, 0, state.spec.width-1, 20, state.spec.accent)
-        |> draw_text(0, 4, format_dt(dtstart), :white, state.fonts.body, centered: state.spec.width)
-        |> draw_text(0, 40, location, :black, state.fonts.body, centered: state.spec.width)
-        |> draw_rect(8, state.spec.height-34, state.spec.width-8, state.spec.height-34, :black)
-        |> draw_text(0, state.spec.height-32, after_title, :black, state.fonts.body, centered: state.spec.width)
-        |> draw_text(0, state.spec.height-16, after_start, :black, state.fonts.body, centered: state.spec.width)
-        |> draw_text(0, 24, title, :black, state.fonts.title, centered: state.spec.width)
-        |> cull(state.spec)
-        |> push(state.pids)
+        if force or next_event != state.last_event do
+          Logger.info("Updating...")
+          %{summary: title, dtstart: dtstart, location: location} = next_event
+          {after_title, after_start} = case events do
+            [%{summary: s, dtstart: st}] -> {s, format_t(st)}
+            _ -> {"", ""}
+          end
+          state.spec
+          |> blank_buffer(:white)
+          |> draw_rect(0, 0, state.spec.width-1, 20, state.spec.accent)
+          |> draw_text(0, 4, format_dt(dtstart), :white, state.fonts.body, centered: state.spec.width)
+          |> draw_text(0, 40, location, :black, state.fonts.body, centered: state.spec.width)
+          |> draw_rect(8, state.spec.height-34, state.spec.width-8, state.spec.height-34, :black)
+          |> draw_text(0, state.spec.height-32, after_title, :black, state.fonts.body, centered: state.spec.width)
+          |> draw_text(0, state.spec.height-16, after_start, :black, state.fonts.body, centered: state.spec.width)
+          |> draw_text(0, 24, title, :black, state.fonts.title, centered: state.spec.width)
+          |> cull(state.spec)
+          |> push(state.pids)
 
-        %{state | last_event: next_event}
+          %{state | last_event: next_event}
+        else
+          Logger.info("No update, unchanged")
+          state
+        end
     end
   end
 
